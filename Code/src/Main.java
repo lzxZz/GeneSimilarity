@@ -19,7 +19,8 @@ public class Main {
 // //            HashMap<String,TermNode> nodesdict = ReadFile.getNodesDict();
 // //            ArrayList<AnnoNode> list =  ReadFile.getGeneNodes("gene.gaf");
 //             ReadFile.getCoFunctionNet("net.txt");
-                Pjj.getSimilarity("GO0000165", "GO0000001");
+           
+             Pjj.getSimilarity("GO0006606", "GO0071035");
         } catch (IOException e) {
             e.printStackTrace();
         }

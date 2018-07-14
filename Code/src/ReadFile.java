@@ -39,39 +39,39 @@ import java.util.regex.Pattern;
             String      isa         = "";
             String      partof      = "";
             boolean     isObsolete  = false;
-            System.out.println(term);
+            // System.out.println(term);
 
             Matcher     idm         = idPattern.matcher(term);
             if(idm.find()){
-                System.out.println("ID : " + idm.group().replace(":",""));
+                // System.out.println("ID : " + idm.group().replace(":",""));
                 id = idm.group().replace(":","");
                 node.ID = id;
             }
 
             Matcher namem = namePattern.matcher(term);
             if (namem.find()){
-                System.out.println("name : " + namem.group());
+                // System.out.println("name : " + namem.group());
                 name = namem.group();
                 node.name = name;
             }
 
             Matcher nsm = namespacePattern.matcher(term);
             if (nsm.find()){
-                System.out.println("NameSpace : " + nsm.group());
+                // System.out.println("NameSpace : " + nsm.group());
                 namespace  = nsm.group();
                 node.namespace =  namespace;
             }
 
             Matcher defm  = defPattern.matcher(term);
             if (defm.find()){
-                System.out.println("Def : " + defm.group());
+                // System.out.println("Def : " + defm.group());
                 def = defm.group();
                 node.def = def;
             }
 
             Matcher isam = isaPattern.matcher(term);
             while (isam.find()) {
-                System.out.println("Is_a Parent ID : " + isam.group().replace(":",""));
+                // System.out.println("Is_a Parent ID : " + isam.group().replace(":",""));
                 isa = isam.group().replace(":","");
                 node.IParentIDs.add(isa);
             }
@@ -79,7 +79,7 @@ import java.util.regex.Pattern;
 
             Matcher partofm = partofPattern.matcher(term);
             while (partofm.find()){
-                System.out.println("Part_of Parent ID : " + partofm.group());
+                // System.out.println("Part_of Parent ID : " + partofm.group());
                 partof = partofm.group();
                 node.PParentIDs.add(partof);
             }

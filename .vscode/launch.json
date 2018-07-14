@@ -15,7 +15,8 @@
             "startupClass": "Main",
             "classpath": [
                 ".",
-                "./Code/src"
+                "./Code/src",
+                "./Code/out"
             ]
         },
         {

@@ -9,47 +9,47 @@ public class Pjj {
     private static ArrayList<AnnoNode> annoNodes;
     private static ArrayList<TermNode> ontoNodes;
     private static ArrayList<NetEdge> netEdges;
-    private static HashMap<String,TermNode> ontoDict;
+    private static HashMap<String, TermNode> ontoDict;
     private static HashMap<String, Double> netHashMap;
-    private static HashMap<String,AnnoNode> annoDict;
-    private static HashMap<String,PTermNode> pontoDict;
+    private static HashMap<String, AnnoNode> annoDict;
+    private static HashMap<String, PTermNode> pontoDict;
+
     // 数据初始化操作
     public static void init() throws IOException {
         annoNodes = ReadFile.getGeneNodes("gene.gaf");
         ontoNodes = ReadFile.readOboFile("onto.obo");
         ontoDict = ReadFile.getNodesDict();
         netEdges = ReadFile.getCoFunctionNet("net.txt");
-        
+
         netHashMap = new HashMap<String, Double>();
         annoDict = new HashMap<>();
-        for (AnnoNode node:annoNodes){
+        for (AnnoNode node : annoNodes) {
             annoDict.put(node.ID, node);
         }
 
         pontoDict = new HashMap<>();
-        for (TermNode node:ontoNodes){
+        for (TermNode node : ontoNodes) {
             PTermNode pnode = new PTermNode();
             pnode.ID = node.ID;
-            pnode.def =  node.def;
-            pnode.IParentIDs =  node.IParentIDs;
+            pnode.def = node.def;
+            pnode.IParentIDs = node.IParentIDs;
             pnode.PParentIDs = node.PParentIDs;
             pnode.IParentNodes = node.IParentNodes;
             pnode.PParentNodes = node.PParentNodes;
-            pnode.isObsolete =  node.isObsolete;;
+            pnode.isObsolete = node.isObsolete;
+            ;
             pnode.name = node.name;
             pnode.namespace = node.namespace;
-            
-            
-            
+
             pontoDict.put(node.ID, pnode);
         }
-        for (TermNode node:ontoNodes){
-            for (String id:node.PParentIDs){
+        for (TermNode node : ontoNodes) {
+            for (String id : node.PParentIDs) {
 
                 pontoDict.get(node.ID).childNodes.add(pontoDict.get(id));
             }
 
-            for (String id:node.IParentIDs){
+            for (String id : node.IParentIDs) {
                 pontoDict.get(node.ID).childNodes.add(pontoDict.get(id));
             }
         }
@@ -64,18 +64,18 @@ public class Pjj {
 
     }
 
-    //返回-200表示两个术语非同分支
+    // 返回-200表示两个术语非同分支
     public static double getSimilarity(String ta, String tb) throws IOException {
-        //获取G
+        // 获取G
         init();
         int countG = 0;
-        if (annoDict.containsKey(ta) && annoDict.containsKey(tb)){
-            if ((! annoDict.get(ta).NameSpace.equals(  annoDict.get(tb).NameSpace))){
+        if (annoDict.containsKey(ta) && annoDict.containsKey(tb)) {
+            if ((!annoDict.get(ta).NameSpace.equals(annoDict.get(tb).NameSpace))) {
                 return -200;
-            }else{
+            } else {
                 String ns = annoDict.get(ta).NameSpace;
-                for (AnnoNode node:annoNodes){
-                    if (ns.equals(node.NameSpace)){
+                for (AnnoNode node : annoNodes) {
+                    if (ns.equals(node.NameSpace)) {
                         countG++;
                     }
 
@@ -89,37 +89,85 @@ public class Pjj {
 
         double d = getSimilarity2_1(ta, tb);
 
-        ArrayList<String> P = getPublicParent(ta, tb);
+        ArrayList<String> PNodeIds = getPublicParent(ta, tb);
 
         double similarityValue = 0.0;
-        for (String p : P){
-
+        for (String pid : PNodeIds) {
+            // u
+            ArrayList<String> uabpGenes = getUabp(pontoDict.get(ta), pontoDict.get(tb), pontoDict.get(pid));
+            // f
+            double f = d * d * uabpGenes.size() + (1 - d * d) * Math.sqrt(Ga.size() * Gb.size());
+            // h
+            double h = d * d * countG + (1 - d * d) * Math.max(Ga.size(), Gb.size());
+            // s
+            double sim = 0.0;
+            sim = (2 * Math.log(countG) - 2 * Math.log(f))
+                    / (2 * Math.log(countG) - Math.log(Ga.size()) - Math.log(Gb.size()))
+                    * (1 - h / countG * PNodeIds.size() / countG);
+            similarityValue = sim > similarityValue ? sim : similarityValue;
         }
 
         return similarityValue;
+    }
+
+    // 计算U(ta,tb,p)的注释基因集合
+    public static ArrayList<String> getUabp(PTermNode ta, PTermNode tb, PTermNode tp) {
+        ArrayList<PTermNode> nodes = new ArrayList<>();
+        nodes.addAll(getPathWayNode(tp, ta));
+        nodes.addAll(getPathWayNode(tp, tb));
+        nodes.add(tp);
+        nodes.addAll(getAllAnnoNodeByNode(ta));
+        nodes.addAll(getAllAnnoNodeByNode(tb));
+
+        ArrayList<String> genes = new ArrayList<>();
+        for (PTermNode node : nodes) {
+            genes.add(annoDict.get(node.ID).GeneName);
+            genes.addAll(annoDict.get(node.ID).Synonym);
+        }
+
+        // 去重复
+        HashSet set = new HashSet<>(genes);
+        genes.clear();
+        genes.addAll(set);
+        genes.trimToSize();
+
+        return genes;
+    }
+
+    private static ArrayList<PTermNode> getAllAnnoNodeByNode(PTermNode node) {
+        ArrayList<PTermNode> nodes = new ArrayList<>();
+        if (node.childNodes != null) {
+            nodes.addAll(node.childNodes);
+            for (PTermNode tNode : node.childNodes) {
+                nodes.addAll(getAllAnnoNodeByNode(tNode));
+            }
+        } else {
+            return null;
+        }
+        return nodes;
     }
 
     public static ArrayList<TermNode> getParentNode(String id) {
         ArrayList<TermNode> parents = new ArrayList<>();
         if (ontoDict.containsKey(id)) {
             TermNode node = ontoDict.get(id);
-            for (String pid:node.PParentIDs){
+            for (String pid : node.PParentIDs) {
                 parents.add(ontoDict.get(pid));
             }
-            
-            for(String innerid: node.PParentIDs){
+
+            for (String innerid : node.PParentIDs) {
                 parents.addAll(getParentNode(innerid));
             }
 
-            for (String pid:node.IParentIDs){
+            for (String pid : node.IParentIDs) {
                 parents.add(ontoDict.get(pid));
             }
 
-            for(String innerid: node.IParentIDs){
+            for (String innerid : node.IParentIDs) {
                 parents.addAll(getParentNode(innerid));
             }
         }
-        
+
         return parents;
     }
 
@@ -129,13 +177,42 @@ public class Pjj {
 
         ArrayList<String> publicNode = new ArrayList<>();
 
-        for (TermNode node: set1){
-            if (set2.contains(node)){
+        for (TermNode node : set1) {
+            if (set2.contains(node)) {
                 publicNode.add(node.ID);
             }
         }
 
         return publicNode;
+    }
+
+    // 获取节点之间所有路径的节点
+    private static ArrayList<PTermNode> getPathWayNode(PTermNode pnode, PTermNode cnode) {
+        ArrayList<PTermNode> nodes = new ArrayList<>();
+        for (PTermNode node : pnode.childNodes) {
+            if (hasChildNode(node, cnode)) {
+                nodes.add(node);
+                nodes.addAll(getPathWayNode(node, cnode));
+            }
+        }
+        return nodes;
+    }
+
+    // 递归算法，递归次数会很多，严重影响效率
+    private static boolean hasChildNode(PTermNode pnode, PTermNode cnode) {
+
+        if (pnode.childNodes.contains(cnode)) {
+            return true;
+        }
+        if (pnode.childNodes.size() == 0) {
+            return false;
+        } else {
+            for (PTermNode node : pnode.childNodes) {
+                return hasChildNode(node, cnode);
+            }
+        }
+
+        return false;
     }
 
     // return the D(go1,go2) 公式2-1

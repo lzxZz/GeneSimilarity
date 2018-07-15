@@ -20,7 +20,7 @@ public class Main {
 // //            ArrayList<AnnoNode> list =  ReadFile.getGeneNodes("gene.gaf");
 //             ReadFile.getCoFunctionNet("net.txt");
            
-             Pjj.getSimilarity("GO0006606", "GO0071035");
+          System.out.println(Pjj.getSimilarity("GO0006606", "GO0071035"));
         } catch (IOException e) {
             e.printStackTrace();
         }

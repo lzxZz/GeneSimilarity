@@ -14,6 +14,7 @@ import java.util.regex.Pattern;
    static private HashMap<String,TermNode> NodesDict = new HashMap<String,TermNode>();
 
    public static ArrayList<TermNode> readOboFile(String oboFile) throws IOException {
+
        ArrayList<TermNode> AllNode  =   new ArrayList<TermNode>();
        String content               =   new String(Files .readAllBytes(Paths.get(oboFile)));
 
@@ -29,7 +30,6 @@ import java.util.regex.Pattern;
 
         Matcher m = termPattern.matcher(content);
         while (m.find()){
-
             TermNode    node        = new TermNode();
             String      term        = m.group();
             String      id          = "";
@@ -90,6 +90,7 @@ import java.util.regex.Pattern;
             }
 
             AllNode.add(node);
+
             NodesDict.put(node.ID,node);
         }
 
@@ -102,9 +103,11 @@ import java.util.regex.Pattern;
 
    static ArrayList<AnnoNode> getGeneNodes(String gafFile) throws IOException {
        ArrayList<AnnoNode> genes = new ArrayList<AnnoNode>();
+
        for (String line : Files.readAllLines(Paths.get(gafFile))){
+
            String[] ss = line.split("\t");
-//           System.out.println(ss.length);
+
            if (ss.length > 11) {
 //                System.out.println("Gene ID : " + ss[2]  + "\t\t Go ID : " + ss[4]);
 //               System.out.println(line.replace("\t","---"));

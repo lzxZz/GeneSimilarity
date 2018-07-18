@@ -1,4 +1,8 @@
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,13 +17,17 @@ public class Pjj {
     private static HashMap<String, Double> netHashMap;
     private static HashMap<String, AnnoNode> annoDict;
     private static HashMap<String, PTermNode> pontoDict;
+    private static final String Log = "D:/pjjlog.txt";
 
     // 数据初始化操作
     public static void init() throws IOException {
         annoNodes = ReadFile.getGeneNodes("gene.gaf");
+        System.out.println("read gene finished");
         ontoNodes = ReadFile.readOboFile("onto.obo");
+        System.out.println("read onto finished");
         ontoDict = ReadFile.getNodesDict();
         netEdges = ReadFile.getCoFunctionNet("net.txt");
+        System.out.println("read net finished");
 
         netHashMap = new HashMap<String, Double>();
         annoDict = new HashMap<>();
@@ -64,10 +72,11 @@ public class Pjj {
 
     }
 
+
     // 返回-200表示两个术语非同分支
     public static double getSimilarity(String ta, String tb) throws IOException {
         // 获取G
-        init();
+        //init();
         int countG = 0;
         if (annoDict.containsKey(ta) && annoDict.containsKey(tb)) {
             if ((!annoDict.get(ta).NameSpace.equals(annoDict.get(tb).NameSpace))) {
@@ -87,23 +96,45 @@ public class Pjj {
         ArrayList<String> Ga = getGeneSetByGoId(ta);
         ArrayList<String> Gb = getGeneSetByGoId(tb);
 
-        double d = getSimilarity2_1(ta, tb);
+        if (Ga.size()==0 || Gb.size()==0){
+            System.out.println("该术语对没有注释基因");
+            return -100;
+        }
+
 
         ArrayList<String> PNodeIds = getPublicParent(ta, tb);
 
+        HashSet set = new HashSet(PNodeIds);
+        PNodeIds.clear();
+        PNodeIds.addAll(set);
+
+
         double similarityValue = 0.0;
+
+        if (PNodeIds.size() == 0) {
+
+            System.out.println("没有公共祖先节点");
+            return -300;
+        }
+        double d = getSimilarity2_1(ta, tb);
+
+        ArrayList<String> uabpGenes = new ArrayList<>();
         for (String pid : PNodeIds) {
             // u
-            ArrayList<String> uabpGenes = getUabp(pontoDict.get(ta), pontoDict.get(tb), pontoDict.get(pid));
+            uabpGenes.clear();
+            uabpGenes = getUabp(pontoDict.get(ta), pontoDict.get(tb), pontoDict.get(pid));
             // f
             double f = d * d * uabpGenes.size() + (1 - d * d) * Math.sqrt(Ga.size() * Gb.size());
             // h
             double h = d * d * countG + (1 - d * d) * Math.max(Ga.size(), Gb.size());
             // s
+
+
             double sim = 0.0;
             sim = (2 * Math.log(countG) - 2 * Math.log(f))
                     / (2 * Math.log(countG) - Math.log(Ga.size()) - Math.log(Gb.size()))
                     * (1 - h / countG * PNodeIds.size() / countG);
+           // System.out.println(similarityValue);
             similarityValue = sim > similarityValue ? sim : similarityValue;
         }
 
@@ -121,8 +152,13 @@ public class Pjj {
 
         ArrayList<String> genes = new ArrayList<>();
         for (PTermNode node : nodes) {
-            genes.add(annoDict.get(node.ID).GeneName);
-            genes.addAll(annoDict.get(node.ID).Synonym);
+            if (node != null) {
+                AnnoNode anno = annoDict.get(node.ID);
+                if (anno != null) {
+                    genes.add(anno.GeneName);
+                    genes.addAll(anno.Synonym);
+                }
+            }
         }
 
         // 去重复
@@ -139,7 +175,8 @@ public class Pjj {
         if (node.childNodes != null) {
             nodes.addAll(node.childNodes);
             for (PTermNode tNode : node.childNodes) {
-                nodes.addAll(getAllAnnoNodeByNode(tNode));
+                if (tNode != null)
+                    nodes.addAll(getAllAnnoNodeByNode(tNode));
             }
         } else {
             return null;
@@ -176,12 +213,20 @@ public class Pjj {
         ArrayList<TermNode> set2 = getParentNode(tb);
 
         ArrayList<String> publicNode = new ArrayList<>();
+        try {
+            for (TermNode node : set1) {
+                if (node != null) {
 
-        for (TermNode node : set1) {
-            if (set2.contains(node)) {
-                publicNode.add(node.ID);
+
+                    if (set2.contains(node)) {
+                        publicNode.add(node.ID);
+                    }
+                }
             }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
+
 
         return publicNode;
     }
@@ -190,9 +235,11 @@ public class Pjj {
     private static ArrayList<PTermNode> getPathWayNode(PTermNode pnode, PTermNode cnode) {
         ArrayList<PTermNode> nodes = new ArrayList<>();
         for (PTermNode node : pnode.childNodes) {
-            if (hasChildNode(node, cnode)) {
-                nodes.add(node);
-                nodes.addAll(getPathWayNode(node, cnode));
+            if (node !=null) {
+                if (hasChildNode(node, cnode)) {
+                    nodes.add(node);
+                    nodes.addAll(getPathWayNode(node, cnode));
+                }
             }
         }
         return nodes;
@@ -208,7 +255,11 @@ public class Pjj {
             return false;
         } else {
             for (PTermNode node : pnode.childNodes) {
-                return hasChildNode(node, cnode);
+                if (node != null) {
+                    return hasChildNode(node, cnode);
+                }else{
+                    return false;
+                }
             }
         }
 
@@ -217,7 +268,7 @@ public class Pjj {
 
     // return the D(go1,go2) 公式2-1
     public static double getSimilarity2_1(String go1, String go2) throws IOException {
-        init();
+
         // 根据给定的基因本体，获取对应的基因集合
         ArrayList<String> geneSet1 = getGeneSetByGoId(go1);
         ArrayList<String> geneSet2 = getGeneSetByGoId(go2);
@@ -235,6 +286,9 @@ public class Pjj {
 
         value = (l12 + l21) / (2 * (geneSet1.size() + geneSet2.size()) - l12 - l21);
 
+        if (geneSet1.size() == 0 || geneSet2.size() == 0) {
+            System.out.println("该术语对没有注释基因");
+        }
         return value;
     }
 
@@ -255,14 +309,28 @@ public class Pjj {
     public static double doubleSetAB(ArrayList<String> set1, ArrayList<String> set2) {
         double sum = 0.0;
         for (String gene1 : set1) {
+            double value = 1;
             for (String gene2 : set2) {
                 String key = gene1 + "-" + gene2;
-                if (gene1.equals(gene2)) {
-                    sum += 1;
-                } else if (netHashMap.containsKey(key)) {
-                    sum += (1 - netHashMap.get(key));
-                }
+//                try {
+                    if (gene1.equals(gene2)) {
+                        value *= 0;
+//                        Files.write(Paths.get(Log), (key + "\t---\t0\r\n").getBytes(), StandardOpenOption.APPEND);
+                    } else if (netHashMap.containsKey(key)) {
+                         value *= (1 - netHashMap.get(key));
+
+
+//                        Files.write(Paths.get(Log), (key + "\t---\t" + (1 - netHashMap.get(key)) + "\r\n").getBytes(), StandardOpenOption.APPEND);
+
+                    } else {
+
+//                        Files.write(Paths.get(Log), (key + "\t---\t1\r\n").getBytes(), StandardOpenOption.APPEND);
+                    }
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
             }
+            sum += value;
         }
 
         return sum;

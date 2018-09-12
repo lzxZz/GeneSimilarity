@@ -1,5 +1,12 @@
-*.txt
-*.mat
-*.buf
-*.gaf
-*.obo
+buf/
+data/
+out/
+*.pdf
+*.java
+Makefile
+
+!LFC.java
+!Main.java
+!TermSim.java
+!GeneSimm.java
+!

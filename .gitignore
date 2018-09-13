@@ -1,12 +1,9 @@
 buf/
 data/
 out/
+src.old/
+result/
 *.pdf
-*.java
+
 Makefile
 
-!LFC.java
-!Main.java
-!TermSim.java
-!GeneSimm.java
-!

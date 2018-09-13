@@ -161,7 +161,7 @@ public class Main {
 // 项目的伸缩性只需要在矩阵完备化处能够支持接入不同的方法即可
 
 
-    public static void main(String... args)
+    public static void main(String... args) throws IOException
     {
         // 前三步的计算都能够通过多线程来进行加速
         // 读取参数，选择要进行的计算，输出文件如果已经存在，则不会进行计算，避免覆盖掉已有数据
@@ -186,6 +186,7 @@ public class Main {
         // 输入参数， 基因相似度文件，输出文件，是否输出到控制台
         // 依赖于基因相似度
         
+        LFC.Calculator("./result/gene.result", "./result/lfc.result", true);
     }
 }
 
